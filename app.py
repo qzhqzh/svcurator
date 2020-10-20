@@ -9,17 +9,20 @@ from flask_migrate import Migrate
 import json
 import random
 from random import shuffle
-# from OAuth import google_login
-from flask_dance.contrib.google import make_google_blueprint, google
+
+from flask_dance.contrib.github import make_github_blueprint, github
 from flask_login import UserMixin, current_user, LoginManager, login_required, login_user, logout_user
-from flask_dance.consumer.backend.sqla import OAuthConsumerMixin, SQLAlchemyBackend
+from flask_dance.consumer.storage.sqla import OAuthConsumerMixin, SQLAlchemyStorage
+
 from flask_dance.consumer import oauth_authorized
 from sqlalchemy.orm.exc import NoResultFound
+from flask_migrate import Migrate, MigrateCommand
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 
-app.config['SQLALCHEMY_DATABASE_URI'] = 
+app.config['SECRET_KEY'] = '123'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL','sqlite:///' + os.path.join(app.root_path, 'data.db'))
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
 
 db = SQLAlchemy(app)
@@ -93,7 +96,7 @@ Create a Users Table
 '''
 class User(UserMixin, db.Model):
 	id = db.Column(db.Integer, primary_key=True)
-	google_id = db.Column(db.Integer, unique=True)
+	github_id = db.Column(db.Integer, unique=True)
 	user_variants = db.Column(db.String(10000))
 
 
@@ -116,19 +119,18 @@ class MyForm(FlaskForm):
 	radios3 = RadioField(choices=[('1', 'Homozygous Reference'),('2', 'Heterozygous Variant'),('3','Homozygous Variant'),('4', 'Complex [ie: 2+ variants in this region] or difficult')])
 	radios4 = RadioField(choices=[('1', '2 [most confident]'),('2', '1'),('3','0 [least confident]')])
 
-google_blueprint =  make_google_blueprint(redirect_to='start_variant', client_id='', client_secret='')
-app.register_blueprint(google_blueprint, url_prefix='/google_login')
-# google_blueprint.backend = SQLAlchemyBackend(OAuth, db.session, user=current_user)
+github_blueprint =  make_github_blueprint(redirect_to='start_variant', client_id='2220d5fd3fd2d23e68a0', client_secret='f04275e71124f841ff232c709aa7d62e7093dc63')
+app.register_blueprint(github_blueprint, url_prefix='/github_login')
 
 @login_manager.user_loader
 def load_user(user_id):
 	return User.query.get(int(user_id))
 
-@app.route('/google')
-def google_login():
-	if not google.authorized:
-		return redirect(url_for('google.login'))
-	account_info = google.get('oauth2/v2/userinfo')
+@app.route('/github')
+def github_login():
+	if not github.authorized:
+		return redirect(url_for('github.login'))
+	account_info = github.get('oauth2/v2/userinfo')
 
 	if account_info.ok:
 	    account_info_json = account_info.json()
@@ -136,20 +138,18 @@ def google_login():
 	print (account_info.json()['id'])
 	return render_template('index.html')
 
-@oauth_authorized.connect_via(google_blueprint)
-def google_logged_in(blueprint, token):
-	account_info = blueprint.session.get('oauth2/v2/userinfo')
-
+@oauth_authorized.connect_via(github_blueprint)
+def github_logged_in(blueprint, token):
+	account_info = blueprint.session.get('user')
 	if account_info.ok:
-		account_info_json = account_info.json()
-		google_id = account_info.json()['id']
-		query = User.query.filter_by(google_id=google_id)
+		github_id = account_info.json()['id']
+		query = User.query.filter_by(github_id=github_id)
 		try:
 			user = query.one()
 		except NoResultFound:
 			rand_list = [[i] for i in range(1,5)]
 			shuffle(rand_list)
-			user = User(google_id=google_id, user_variants=json.dumps(rand_list))
+			user = User(github_id=github_id, user_variants=json.dumps(rand_list))
 			db.session.add(user)
 			db.session.commit()
 		login_user(user)
