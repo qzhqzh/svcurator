@@ -11,3 +11,26 @@ More information on SVCurator can be found in the following publication:
 
 PloS Computational Biology
 (June 19 2020)
+
+
+## Toturial
+
+1. Setting a github OAuth App
+
+  * set callback URL: http://127.0.0.1:5000/github_login
+  * get Client ID and Client Secret for app.py
+  * change the code of getting user information
+
+2. Init database
+
+  * backup migrations dir and remove it.
+
+  * migrate commands
+    ```angular2
+    flask db init
+    flask db migrate
+    flask db upgrade 
+    ```
+  
+  * import variants data
+ 
