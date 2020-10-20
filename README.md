@@ -33,4 +33,22 @@ PloS Computational Biology
     ```
   
   * import variants data
+    
+    `variant2.sql`
  
+3. FAQ
+
+1. 是否有必要使用一个全新的数据库？
+  项目中提供了示例数据库 db_form_responses.db, 可以满足 google 账号验证的需要。
+  但是，该需要注意的是该数据库中 User 表记录的字段是 google_id
+  
+  如果希望创建全新的数据库，可以参考 ** 2. Init database ** 部分的做法。
+  
+2. 出现匿名用户（Anonymous users）找不到 variants 的错误
+  原因是 github 的获取用户信息方式与 google 获取用户方式不同，需要对改部分的代码进行修改
+  
+3. 出现变异不存在错误
+  原因是当使用自建的全新数据库的时候，因为没有导入变异数据，所以报错。
+  
+4. 图片不存在的问题
+  不重要
